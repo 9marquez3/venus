@@ -3,6 +3,8 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/ipfs-force-community/metrics/leakybucket"
+	"golang.org/x/xerrors"
 	"net"
 	"net/http"
 	"os"
@@ -234,14 +236,14 @@ func (node *Node) Stop(ctx context.Context) {
 	}
 }
 
-//RunRPCAndWait start rpc server and listen to signal to exit
+// RunRPCAndWait start rpc server and listen to signal to exit
 func (node *Node) RunRPCAndWait(ctx context.Context, rootCmdDaemon *cmds.Command, ready chan interface{}) error {
 	var terminate = make(chan os.Signal, 1)
 	signal.Notify(terminate, os.Interrupt, syscall.SIGTERM)
 	defer signal.Stop(terminate)
 	// Signal that the sever has started and then wait for a signal to stop.
-	apiConfig := node.repo.Config()
-	mAddr, err := ma.NewMultiaddr(apiConfig.API.APIAddress)
+	cfg := node.repo.Config()
+	mAddr, err := ma.NewMultiaddr(cfg.API.APIAddress)
 	if err != nil {
 		return err
 	}
@@ -259,6 +261,7 @@ func (node *Node) RunRPCAndWait(ctx context.Context, rootCmdDaemon *cmds.Command
 	if err != nil {
 		return err
 	}
+
 	err = node.runJsonrpcAPI(ctx, handler)
 	if err != nil {
 		return err
@@ -267,11 +270,20 @@ func (node *Node) RunRPCAndWait(ctx context.Context, rootCmdDaemon *cmds.Command
 	authMux := jwtauth.NewAuthMux(node.jwtCli, handler)
 	authMux.TrustHandle("/debug/pprof/", http.DefaultServeMux)
 
+	var rootHandler http.Handler
+	if cfg.RateLimitCfg.Enable {
+		if rootHandler, err = leakybucket.NewRateLimitHandler(cfg.RateLimitCfg.Endpoint, authMux); err != nil {
+			return xerrors.Errorf("request rate-limit is enabled, but create rate-limit handler failed:%w", err)
+		}
+	} else {
+		rootHandler = authMux
+	}
+
 	// todo:
 	apikey, _ := tag.NewKey("api")
 
 	apiserv := &http.Server{
-		Handler: authMux,
+		Handler: rootHandler,
 		BaseContext: func(listener net.Listener) context.Context {
 			ctx, _ := tag.New(context.Background(),
 				tag.Upsert(apikey, "venus"))
@@ -287,8 +299,8 @@ func (node *Node) RunRPCAndWait(ctx context.Context, rootCmdDaemon *cmds.Command
 	}()
 
 	// Write the resolved API address to the repo
-	apiConfig.API.APIAddress = apiListener.Multiaddr().String()
-	if err := node.repo.SetAPIAddr(apiConfig.API.APIAddress); err != nil {
+	cfg.API.APIAddress = apiListener.Multiaddr().String()
+	if err := node.repo.SetAPIAddr(cfg.API.APIAddress); err != nil {
 		log.Error("Could not save API address to repo")
 		return err
 	}
@@ -329,7 +341,7 @@ func (node *Node) runJsonrpcAPI(ctx context.Context, handler *http.ServeMux) err
 	return nil
 }
 
-//createServerEnv create server for cmd server env
+// createServerEnv create server for cmd server env
 func (node *Node) createServerEnv(ctx context.Context) *Env {
 	env := Env{
 		ctx:                  ctx,
