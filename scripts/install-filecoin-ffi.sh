@@ -6,4 +6,4 @@ subm_dir="extern/filecoin-ffi"
 
 git submodule update --init --recursive $subm_dir
 
-(cd ${subm_dir} ; ./install-filcrypto ;)
+(cd ${subm_dir} ; FFI_BUILD_FROM_SOURCE=1 ./install-filcrypto ;)
