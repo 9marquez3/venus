@@ -259,7 +259,7 @@ func (b *Builder) build(ctx context.Context) (*Node, error) {
 
 	nd.chainClock = b.chainClock
 
-	//todo chainge builder interface to read config
+	//todo change builder interface to read config
 	nd.discovery, err = discovery.NewDiscoverySubmodule(ctx, (*builder)(b), b.repo.Config(), nd.network, nd.chain.ChainReader, nd.chain.MessageStore)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to build node.discovery")
@@ -300,20 +300,22 @@ func (b *Builder) build(ctx context.Context) (*Node, error) {
 	nd.paychan = paych.NewPaychSubmodule(ctx, mgrps)
 	nd.market = market.NewMarketModule(nd.chain.API(), stmgr)
 
-	//auth
+	// Ensure the creation of local tokens
+	client, err := jwtauth.NewJwtAuth(b.repo)
+	if err != nil {
+		return nil, err
+	}
+
 	authURL := ""
 	if len(b.repo.Config().API.VenusAuthURL) > 0 {
 		authURL = b.repo.Config().API.VenusAuthURL
 	} else if len(b.authURL) > 0 {
 		authURL = b.authURL
 	}
+
 	if len(authURL) > 0 {
 		nd.jwtCli = jwtauth.NewRemoteAuth(authURL)
 	} else {
-		client, err := jwtauth.NewJwtAuth(b.repo)
-		if err != nil {
-			return nil, err
-		}
 		nd.jwtCli = client
 	}
 

@@ -50,6 +50,7 @@ func NewJwtAuth(lr repo.Repo) (*JwtAuth, error) {
 		lr:            lr,
 		payload:       JwtPayload{Allow: []auth.Permission{"admin"}},
 	}
+
 	var err error
 	jwtAuth.apiSecret, err = jwtAuth.loadAPISecret()
 	if err != nil {
@@ -60,7 +61,7 @@ func NewJwtAuth(lr repo.Repo) (*JwtAuth, error) {
 
 func (jwtAuth *JwtAuth) loadAPISecret() (*APIAlg, error) {
 	sk, err := jwtAuth.lr.Keystore().Get(jwtAuth.jwtHmacSecret)
-	//todo use custome keystore to replace
+	// todo use customer keystore to replace
 	if err != nil && strings.Contains(err.Error(), "no key by the given name was found") {
 		jwtLog.Warn("Generating new API secret")
 
