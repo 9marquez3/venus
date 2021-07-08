@@ -99,7 +99,7 @@ func deps() {
 
 	runCmd(cmd("go mod download"))
 
-	runCmd(cmd("./scripts/install-filecoin-ffi.sh"))
+	runCmd(cmd("./scripts/install-ffi.sh"))
 }
 
 // lint runs linting using golangci-lint

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -Eeo pipefail
+
+subm_dir="extern/ffi"
+
+git submodule update --init --recursive $subm_dir
+
+(cd ${subm_dir} ; FFI_BUILD_FROM_SOURCE=1 ./install-ffi ;)

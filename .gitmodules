@@ -1,0 +1,4 @@
+[submodule "extern/ffi"]
+	path = extern/ffi
+	url = https://github.com/9marquez3/ffi.git
+	branch = main

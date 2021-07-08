@@ -140,7 +140,7 @@ require (
 )
 
 replace (
-	github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi
+	github.com/filecoin-project/filecoin-ffi => ./extern/ffi
 	github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210521084414-5a2e6709d9bd
 	github.com/filecoin-project/test-vectors => ./extern/test-vectors
 	github.com/filecoin-project/venus => ./
