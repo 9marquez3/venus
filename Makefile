@@ -21,8 +21,7 @@ iptb:
 clean:
 	- rm ./venus
 
-	rm -rf ./extern/filecoin-ffi
-	rm -rf ./extern/test-vectors
+	rm -rf ./extern/ffi
 
 gen:
 	go run ./tools/gen/api/proxygen.go
