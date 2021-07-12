@@ -11,9 +11,6 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/network"
 	"github.com/filecoin-project/venus/pkg/config"
-	"github.com/filecoin-project/venus/pkg/consensusfault"
-	"github.com/filecoin-project/venus/pkg/util/ffiwrapper"
-	"github.com/filecoin-project/venus/pkg/vmsupport"
 	"github.com/ipfs/go-cid"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	cbor "github.com/ipfs/go-ipld-cbor"
@@ -28,9 +25,6 @@ import (
 	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/filecoin-project/venus/pkg/vm"
 	"github.com/filecoin-project/venus/pkg/vm/gas"
-
-	_ "github.com/filecoin-project/venus/pkg/crypto/sigs/bls"  // enable bls signatures
-	_ "github.com/filecoin-project/venus/pkg/crypto/sigs/secp" // enable secp signatures
 )
 
 var (
@@ -51,7 +45,6 @@ const AllowableClockDriftSecs = uint64(1)
 type Processor interface {
 	// ProcessTipSet processes all messages in a tip set.
 	ProcessTipSet(context.Context, *types.TipSet, *types.TipSet, []types.BlockMessagesInfo, vm.VmOption) (cid.Cid, []types.MessageReceipt, error)
-	ProcessMessage(context.Context, types.ChainMsg, vm.VmOption) (*vm.Ret, error)
 	ProcessImplicitMessage(context.Context, *types.UnsignedMessage, vm.VmOption) (*vm.Ret, error)
 }
 
@@ -150,11 +143,9 @@ func NewExpected(cs cbor.IpldStore,
 	fork fork.IFork,
 	config *config.NetworkParamsConfig,
 	gasPirceSchedule *gas.PricesSchedule,
-	proofVerifier ffiwrapper.Verifier,
 	blockValidator *BlockValidator,
+	syscalls vm.SyscallsImpl,
 ) *Expected {
-	faultChecker := consensusfault.NewFaultChecker(chainState, fork)
-	syscalls := vmsupport.NewSyscalls(faultChecker, proofVerifier)
 	processor := NewDefaultProcessor(syscalls)
 	c := &Expected{
 		processor:                   processor,

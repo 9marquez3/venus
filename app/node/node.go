@@ -3,16 +3,17 @@ package node
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/filecoin-project/venus/app/submodule/multisig/v0api"
+	"github.com/ipfs-force-community/metrics/leakybucket"
+	"golang.org/x/xerrors"
 
+	"contrib.go.opencensus.io/exporter/jaeger"
 	"github.com/awnumar/memguard"
-	"github.com/filecoin-project/venus/app/submodule/multisig"
-
 	"github.com/filecoin-project/go-jsonrpc"
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	cmdhttp "github.com/ipfs/go-ipfs-cmds/http"
@@ -20,6 +21,9 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
 	"github.com/pkg/errors"
+	"go.opencensus.io/tag"
+
+	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
 
 	"github.com/filecoin-project/venus/app/submodule/blockservice"
 	"github.com/filecoin-project/venus/app/submodule/blockstore"
@@ -29,6 +33,8 @@ import (
 	"github.com/filecoin-project/venus/app/submodule/market"
 	"github.com/filecoin-project/venus/app/submodule/mining"
 	"github.com/filecoin-project/venus/app/submodule/mpool"
+	"github.com/filecoin-project/venus/app/submodule/multisig"
+	"github.com/filecoin-project/venus/app/submodule/multisig/v0api"
 	network2 "github.com/filecoin-project/venus/app/submodule/network"
 	"github.com/filecoin-project/venus/app/submodule/paych"
 	"github.com/filecoin-project/venus/app/submodule/storagenetworking"
@@ -39,6 +45,9 @@ import (
 	"github.com/filecoin-project/venus/pkg/jwtauth"
 	"github.com/filecoin-project/venus/pkg/metrics"
 	"github.com/filecoin-project/venus/pkg/repo"
+
+	_ "github.com/filecoin-project/venus/pkg/crypto/bls"  // enable bls signatures
+	_ "github.com/filecoin-project/venus/pkg/crypto/secp" // enable secp signatures
 )
 
 var log = logging.Logger("node") // nolint: deadcode
@@ -96,7 +105,7 @@ type Node struct {
 	//
 	jsonRPCService, jsonRPCServiceV1 *jsonrpc.RPCServer
 
-	jwtCli jwtauth.IJwtAuthClient
+	jaegerExporter *jaeger.Exporter
 }
 
 func (node *Node) Chain() *chain2.ChainSubmodule {
@@ -153,11 +162,13 @@ func (node *Node) OfflineMode() bool {
 
 // Start boots up the node.
 func (node *Node) Start(ctx context.Context) error {
-	if err := metrics.RegisterPrometheusEndpoint(node.repo.Config().Observability.Metrics); err != nil {
+	var err error
+	if err = metrics.RegisterPrometheusEndpoint(node.repo.Config().Observability.Metrics); err != nil {
 		return errors.Wrap(err, "failed to setup metrics")
 	}
 
-	if err := metrics.RegisterJaeger(node.network.Host.ID().Pretty(), node.repo.Config().Observability.Tracing); err != nil {
+	if node.jaegerExporter, err = metrics.RegisterJaeger(node.network.Host.ID().Pretty(),
+		node.repo.Config().Observability.Tracing); err != nil {
 		return errors.Wrap(err, "failed to setup tracing")
 	}
 
@@ -165,18 +176,17 @@ func (node *Node) Start(ctx context.Context) error {
 	syncCtx, node.syncer.CancelChainSync = context.WithCancel(context.Background())
 
 	// Start node discovery
-	err := node.discovery.Start(node.offlineMode)
-	if err != nil {
+	if err = node.discovery.Start(node.offlineMode); err != nil {
 		return err
 	}
 
-	//start syncer module to receive new blocks and start sync to latest height
+	// start syncer module to receive new blocks and start sync to latest height
 	err = node.syncer.Start(syncCtx)
 	if err != nil {
 		return err
 	}
 
-	//Start mpool module to receive new message
+	// Start mpool module to receive new message
 	err = node.mpool.Start(syncCtx)
 	if err != nil {
 		return err
@@ -200,75 +210,113 @@ func (node *Node) Stop(ctx context.Context) {
 	// stop mpool submodule
 	node.mpool.Stop(ctx)
 
-	//stop syncer submodule
+	// stop syncer submodule
 	node.syncer.Stop(ctx)
 
-	//Stop discovery submodule
+	// Stop discovery submodule
 	node.discovery.Stop()
 
-	//Stop network submodule
+	// Stop network submodule
 	node.network.Stop(ctx)
 
-	//Stop chain submodule
+	// Stop chain submodule
 	node.chain.Stop(ctx)
 
-	//Stop paychannel submodule
+	// Stop paychannel submodule
 	node.paychan.Stop()
 
-	//Stop market submodule
-	//node.market.Stop()
+	// Stop market submodule
+	// node.market.Stop()
 
 	if err := node.repo.Close(); err != nil {
 		fmt.Printf("error closing repo: %s\n", err)
 	}
+
+	if node.jaegerExporter != nil {
+		node.jaegerExporter.Flush()
+	}
 }
 
-//RunRPCAndWait start rpc server and listen to signal to exit
+// RunRPCAndWait start rpc server and listen to signal to exit
 func (node *Node) RunRPCAndWait(ctx context.Context, rootCmdDaemon *cmds.Command, ready chan interface{}) error {
 	var terminate = make(chan os.Signal, 1)
 	signal.Notify(terminate, os.Interrupt, syscall.SIGTERM)
 	defer signal.Stop(terminate)
 	// Signal that the sever has started and then wait for a signal to stop.
-	apiConfig := node.repo.Config()
-	mAddr, err := ma.NewMultiaddr(apiConfig.API.APIAddress)
+	cfg := node.repo.Config()
+	mAddr, err := ma.NewMultiaddr(cfg.API.APIAddress)
 	if err != nil {
 		return err
 	}
 
 	// Listen on the configured address in order to bind the port number in case it has
 	// been configured as zero (i.e. OS-provided)
-	apiListener, err := manet.Listen(mAddr) //nolint
+	apiListener, err := manet.Listen(mAddr) // nolint
 	if err != nil {
 		return err
 	}
 
-	netListener := manet.NetListener(apiListener) //nolint
-	handler := http.NewServeMux()
-	err = node.runRestfulAPI(ctx, handler, rootCmdDaemon) //nolint
-	if err != nil {
-		return err
-	}
-	err = node.runJsonrpcAPI(ctx, handler)
+	netListener := manet.NetListener(apiListener) // nolint
+	mux := http.NewServeMux()
+	err = node.runRestfulAPI(ctx, mux, rootCmdDaemon) // nolint
 	if err != nil {
 		return err
 	}
 
-	authMux := jwtauth.NewAuthMux(node.jwtCli, handler)
+	err = node.runJsonrpcAPI(ctx, mux)
+	if err != nil {
+		return err
+	}
+
+	localVerifer, err := jwtauth.NewJwtAuth(node.repo)
+	if err != nil {
+		return err
+	}
+
+	var remoteVerifer *jwtauth.RemoteAuth
+	authURL := node.repo.Config().API.VenusAuthURL
+
+	if len(authURL) > 0 {
+		remoteVerifer = jwtauth.NewRemoteAuth(authURL)
+	}
+
+	var handler http.Handler
+	if cfg.RateLimitCfg.Enable {
+		if handler, err = leakybucket.NewRateLimitHandler(cfg.RateLimitCfg.Endpoint, mux, &jwtauth.ValueFromCtx{},
+			remoteVerifer, logging.Logger("venus-rate-limit")); err != nil {
+			return xerrors.Errorf("request rate-limit is enabled, but create rate-limit handler failed:%w", err)
+		}
+		_ = logging.SetLogLevel("venus-rate-limit", "info")
+	} else {
+		handler = mux
+	}
+
+	authMux := jwtclient.NewAuthMux(localVerifer,
+		remoteVerifer, handler, logging.Logger("venus-auth"))
 	authMux.TrustHandle("/debug/pprof/", http.DefaultServeMux)
+
+	// todo:
+	apikey, _ := tag.NewKey("api")
+
 	apiserv := &http.Server{
 		Handler: authMux,
+		BaseContext: func(listener net.Listener) context.Context {
+			ctx, _ := tag.New(context.Background(),
+				tag.Upsert(apikey, "venus"))
+			return ctx
+		},
 	}
 
 	go func() {
-		err := apiserv.Serve(netListener) //nolint
+		err := apiserv.Serve(netListener) // nolint
 		if err != nil && err != http.ErrServerClosed {
 			return
 		}
 	}()
 
 	// Write the resolved API address to the repo
-	apiConfig.API.APIAddress = apiListener.Multiaddr().String()
-	if err := node.repo.SetAPIAddr(apiConfig.API.APIAddress); err != nil {
+	cfg.API.APIAddress = apiListener.Multiaddr().String()
+	if err := node.repo.SetAPIAddr(cfg.API.APIAddress); err != nil {
 		log.Error("Could not save API address to repo")
 		return err
 	}
@@ -303,14 +351,13 @@ func (node *Node) runRestfulAPI(ctx context.Context, handler *http.ServeMux, roo
 	return nil
 }
 
-//runJsonrpcAPI bind jsonrpc handle
-func (node *Node) runJsonrpcAPI(ctx context.Context, handler *http.ServeMux) error { //nolint
+func (node *Node) runJsonrpcAPI(ctx context.Context, handler *http.ServeMux) error { // nolint
 	handler.Handle("/rpc/v0", node.jsonRPCService)
 	handler.Handle("/rpc/v1", node.jsonRPCServiceV1)
 	return nil
 }
 
-//createServerEnv create server for cmd server env
+// createServerEnv create server for cmd server env
 func (node *Node) createServerEnv(ctx context.Context) *Env {
 	env := Env{
 		ctx:                  ctx,
