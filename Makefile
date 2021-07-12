@@ -28,5 +28,8 @@ gen:
 	gofmt -s -l -w ./app/client/full.go
 	goimports -l -w ./app/client/full.go
 
+gen-cbor:
+	go run ./tools/gen_cbor/*.go
+
 gen-asset:
 	go-bindata -pkg=asset -o ./fixtures/asset/asset.go ./fixtures/_assets/car/ ./fixtures/_assets/proof-params/ ./fixtures/_assets/arch-diagram.monopic

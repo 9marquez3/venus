@@ -61,7 +61,7 @@ func main() {
 		panic(err)
 	}
 
-	if err := gen.WriteTupleEncodersToFile("./pkg/vm/state/cbor_gen.go", "state",
+	if err := gen.WriteTupleEncodersToFile("./pkg/state/tree/cbor_gen.go", "tree",
 		tree.StateRoot{},
 	); err != nil {
 		panic(err)
