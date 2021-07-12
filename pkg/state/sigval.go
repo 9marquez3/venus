@@ -2,7 +2,6 @@ package state
 
 import (
 	"context"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/pkg/errors"
 
@@ -27,7 +26,7 @@ func (v *SignatureValidator) ValidateSignature(ctx context.Context, data []byte,
 	if err != nil {
 		return errors.Wrapf(err, "failed to load signer address for %v", signer)
 	}
-	return crypto.ValidateSignature(data, signerAddress, sig)
+	return crypto.Verify(&sig, signerAddress, data)
 }
 
 //ValidateSignature check the signature of message is valid or not. first get the cid of message and than checkout signature of messager cid and address
@@ -61,7 +60,7 @@ func (v *SignatureValidator) ValidateBLSMessageAggregate(ctx context.Context, ms
 		encodedMsgCids = append(encodedMsgCids, mCid.Bytes())
 	}
 
-	if !crypto.VerifyBLSAggregate(pubKeys, encodedMsgCids, sig.Data) {
+	if crypto.VerifyAggregate(pubKeys, encodedMsgCids, sig.Data) != nil {
 		return errors.New("BLS signature invalid")
 	}
 	return nil
