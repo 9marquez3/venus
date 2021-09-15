@@ -127,7 +127,7 @@ require (
 	github.com/xorcare/golden v0.6.1-0.20191112154924-b87f686d7542 // indirect
 	go.opencensus.io v0.23.0
 	go.uber.org/zap v1.16.0
-	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
+	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/tools v0.1.1 // indirect
@@ -139,7 +139,8 @@ require (
 )
 
 replace (
-	github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi
+	github.com/filecoin-project/filecoin-ffi => ../ffi
+	//github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi
 	github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210721095535-a67dff16de21
 	github.com/filecoin-project/test-vectors => ./extern/test-vectors
 	github.com/filecoin-project/venus => ./

@@ -25,6 +25,7 @@ tools/aggregator/aggregator
 tools/genesis-file-server/genesis-file-server
 tools/prerelease-tool/prerelease-tool
 tools/chain-util/chain-util
+tools/gen_cbor/gen_cbor
 **/paramcache
 **/*.h
 **/*.a

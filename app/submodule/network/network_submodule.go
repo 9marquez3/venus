@@ -125,7 +125,7 @@ func NewNetworkSubmodule(ctx context.Context, config networkConfig, repo network
 		}
 	}
 
-	// peer manager
+	// peer manager 解析配置的监听地址
 	bootNodes, err := net.ParseAddresses(ctx, repo.Config().Bootstrap.Addresses)
 	if err != nil {
 		return nil, err
