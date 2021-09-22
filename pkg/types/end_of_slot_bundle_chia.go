@@ -15,9 +15,9 @@ type ChallengeChainSubSlot struct {
 	// ChallengeChainEndOfSlotVdf: VDFInfo
 	ChallengeChainEndOfSlotVdf *VDFInfo
 	// infusedChallengeChainSubSlotHash: Optional[bytes32]  # Only at the end of a slot
-	InfusedChallengeChainSubSlotHash []byte
+	InfusedChallengeChainSubSlotHash *HashDigest256
 	// subepochSummaryHash: Optional[bytes32]  # Only once per sub-epoch, and one sub-epoch delayed
-	SubepochSummaryHash [32]byte
+	SubepochSummaryHash *HashDigest256
 	// newSubSlotIters: Optional[uint64]  # Only at the end of epoch, sub-epoch, and slot
 	NewSubSlotIters *uint64
 	// newDifficulty: Optional[uint64]  # Only at the end of epoch, sub-epoch, and slot
@@ -35,9 +35,9 @@ type RewardChainSubSlot struct {
 	// endOfSlotVdf: VDFInfo
 	EndOfSlotVdf *VDFInfo
 	// challengeChainSubSlotHash: bytes32
-	ChallengeChainSubSlotHash [32]byte
+	ChallengeChainSubSlotHash *HashDigest256
 	// infusedChallengeChainSubSlotHash: Optional[bytes32]
-	InfusedChallengeChainSubSlotHash []byte
+	InfusedChallengeChainSubSlotHash *HashDigest256
 	// deficit: uint8  # 16 or less. usually zero
 	Deficit uint8
 }

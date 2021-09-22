@@ -9,11 +9,11 @@ import (
 type TransactionsInfo struct {
 	// # Information that goes along with each transaction block
 	// generatorRoot: bytes32  # sha256 of the block generator in this block
-	GeneratorRoot [32]byte
+	GeneratorRoot *HashDigest256
 	// generatorRefsRoot: bytes32  # sha256 of the concatenation of the generator ref list entries
-	GeneratorRefsRoot [32]byte
+	GeneratorRefsRoot *HashDigest256
 	// aggregatedSignature: G2Element
-	AggregatedSignature [SignatureBytes]byte
+	AggregatedSignature *Signature
 	// fees: uint64  # This only includes user fees, not block rewards
 	Fees uint64
 	// cost: uint64  # This is the total cost of this block, including CLVM cost, cost of program size and conditions
@@ -27,7 +27,7 @@ type Coin struct {
 	// parentCoinInfo: bytes32  # down with this sort of thing.
 	ParentCoinInfo [32]byte
 	// puzzleHash: bytes32
-	PuzzleHash [32]byte
+	PuzzleHash *HashDigest256
 	// amount: uint64
 	Amount uint64
 }
@@ -93,37 +93,37 @@ func intToBytes(v uint64) []byte {
 // Is the prev from the signage point, and can be replaced with a more recent block
 type Foliage struct {
 	// prevBlockHash: bytes32
-	PrevBlockHash [32]byte
+	PrevBlockHash *HashDigest256
 	// rewardBlockHash: bytes32
-	RewardBlockHash [32]byte
+	RewardBlockHash *HashDigest256
 	// foliageBlockData: FoliageBlockData
 	FoliageBlockData *FoliageBlockData
 	// foliageBlockDataSignature: G2Element
-	FoliageBlockDataSignature [SignatureBytes]byte
+	FoliageBlockDataSignature *Signature
 	// foliageTransactionBlockHash: Optional[bytes32]
-	FoliageTransactionBlockHash [32]byte
+	FoliageTransactionBlockHash *HashDigest256
 	// foliageTransactionBlockSignature: Optional[G2Element] (optional use golang pointer)
-	FoliageTransactionBlockSignature []byte
+	FoliageTransactionBlockSignature *Signature
 }
 
 // FoliageBlockData
 // Part of the block that is signed by the plot key
 type FoliageBlockData struct {
 	// unfinishedRewardBlockHash: bytes32
-	UnfinishedRewardBlockHash [32]byte
+	UnfinishedRewardBlockHash *HashDigest256
 	// poolTarget: PoolTarget
 	PoolTarget *PoolTarget
 	// poolSignature: Optional[G2Element]  # Iff ProofOfSpace has a pool pk (optional use golang pointer)
 	PoolSignature []byte
 	// farmerRewardPuzzleHash: bytes32
-	FarmerRewardPuzzleHash [32]byte
+	FarmerRewardPuzzleHash *HashDigest256
 	// extensionData: bytes32  # Used for future updates. Can be any 32 byte value initially
 	ExtensionData [32]byte
 }
 
 type PoolTarget struct {
 	// puzzleHash: bytes32
-	PuzzleHash [32]byte
+	PuzzleHash *HashDigest256
 	// maxHeight: uint32  # A max height of 0 means it is valid forever
 	MaxHeight uint32
 }

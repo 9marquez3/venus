@@ -4,32 +4,14 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-
 	bls "github.com/cnc-project/cnc-bls"
+	ffi "github.com/filecoin-project/filecoin-ffi"
 )
 
-// SignatureBytes is the length of a BLS signature
-const SignatureBytes = 96
+var ToHashBytes32 = bls.HashDigest256FromBytes
 
-var bytes32Zero = [32]byte{}
-
-func Bytes32Zero(b [32]byte) bool {
-	return bytes.Equal(b[:], bytes32Zero[:])
-}
-
-func NewBytes32() [32]byte {
-	return [32]byte{}
-}
-
-func ToBytes32(b []byte) [32]byte {
-	bt := [32]byte{}
-	copy(bt[:], b)
-	return bt
-}
-
-func ToBytes(b [32]byte) []byte {
-	return b[:]
-}
+type HashDigest256 = bls.HashDigest256
+type Signature = ffi.Signature
 
 type RewardChainBlockUnfinished struct {
 	// total_iters: uint128
@@ -37,17 +19,17 @@ type RewardChainBlockUnfinished struct {
 	// signage_point_index: uint8
 	SignagePointIndex uint8
 	// pos_ss_cc_challenge_hash: bytes32
-	PosSsCcChallengeHash [32]byte
+	PosSsCcChallengeHash *HashDigest256
 	// proof_of_space: ProofOfSpace
-	ProofOfSpace ProofOfSpace
+	ProofOfSpace *ProofOfSpace
 	// challenge_chain_sp_vdf: Optional[VDFInfo]  # Not present for first sp in slot
 	ChallengeChainSpVdf *VDFInfo
 	// challenge_chain_sp_signature: G2Element
-	ChallengeChainSpSignature [SignatureBytes]byte
+	ChallengeChainSpSignature *Signature
 	// reward_chain_sp_vdf: Optional[VDFInfo]  # Not present for first sp in slot
 	RewardChainSpVdf *VDFInfo
 	// reward_chain_sp_signature: G2Element
-	RewardChainSpSignature [SignatureBytes]byte
+	RewardChainSpSignature *Signature
 }
 
 type RewardChainBlock struct {
@@ -60,19 +42,19 @@ type RewardChainBlock struct {
 	// signage_point_index: uint8
 	SignagePointIndex uint8
 	// pos_ss_cc_challenge_hash: bytes32
-	PosSsCcChallengeHash [32]byte
+	PosSsCcChallengeHash *HashDigest256
 	// proof_of_space: ProofOfSpace
-	ProofOfSpace ProofOfSpace
+	ProofOfSpace *ProofOfSpace
 	// challenge_chain_sp_vdf: Optional[VDFInfo]  # Not present for first sp in slot
 	ChallengeChainSpVdf *VDFInfo
 	// challenge_chain_sp_signature: G2Element
-	ChallengeChainSpSignature [SignatureBytes]byte
+	ChallengeChainSpSignature *Signature
 	// challenge_chain_ip_vdf: VDFInfo
 	ChallengeChainIpVdf *VDFInfo
 	// reward_chain_sp_vdf: Optional[VDFInfo]  # Not present for first sp in slot
 	RewardChainSpVdf *VDFInfo
 	// reward_chain_sp_signature: G2Element
-	RewardChainSpSignature [SignatureBytes]byte
+	RewardChainSpSignature *Signature
 	// reward_chain_ip_vdf: VDFInfo
 	RewardChainIpVdf *VDFInfo
 	// infused_challenge_chain_ip_vdf: Optional[VDFInfo]  # Iff deficit < 16
@@ -100,7 +82,7 @@ type ProofOfSpace struct {
 	// pool_public_key: Optional[G1Element]  # Only one of these two should be present
 	PoolPublicKey *bls.PublicKey
 	// pool_contract_puzzle_hash: Optional[bytes32]
-	PoolContractPuzzleHash [32]byte
+	PoolContractPuzzleHash *HashDigest256
 	// plot_public_key: G1Element
 	PlotPublicKey *bls.PublicKey
 	// size: uint8
@@ -116,12 +98,12 @@ func (p ProofOfSpace) GetPlotId() []byte {
 	return p.CalculatePlotIdPk(p.PoolPublicKey, p.PlotPublicKey)
 }
 
-func (p ProofOfSpace) VerifyAndGetQualityString(constants *ConsensusConstants, originalChallengeHash, signagePoint [32]byte) ([]byte, error) {
+func (p ProofOfSpace) VerifyAndGetQualityString(constants *ConsensusConstants, originalChallengeHash, signagePoint *HashDigest256) ([]byte, error) {
 
-	if p.PoolPublicKey == nil && Bytes32Zero(p.PoolContractPuzzleHash) {
+	if p.PoolPublicKey == nil && p.PoolContractPuzzleHash.IsZero() {
 		return nil, fmt.Errorf("fail 1")
 	}
-	if p.PoolPublicKey != nil && !Bytes32Zero(p.PoolContractPuzzleHash) {
+	if p.PoolPublicKey != nil && !p.PoolContractPuzzleHash.IsZero() {
 		return nil, fmt.Errorf("fail 2")
 	}
 	if int(p.Size) < constants.MinPlotSize {
@@ -132,27 +114,27 @@ func (p ProofOfSpace) VerifyAndGetQualityString(constants *ConsensusConstants, o
 	}
 
 	plotId := p.GetPlotId()
-	plotId32 := ToBytes32(plotId)
+	plotId32 := ToHashBytes32(plotId)
 
-	challenge := p.CalculatePosChallenge(plotId32, originalChallengeHash, signagePoint)
+	challenge := p.CalculatePosChallenge(&plotId32, originalChallengeHash, signagePoint)
 
 	if !bytes.Equal(challenge, p.Challenge[:]) {
 		return nil, fmt.Errorf("new challenge %s is not Equal challenge %s",
 			hex.EncodeToString(challenge), hex.EncodeToString(p.Challenge[:]))
 	}
 
-	if !p.PassesPlotFilter(constants, plotId32, originalChallengeHash, signagePoint) {
+	if !p.PassesPlotFilter(constants, &plotId32, originalChallengeHash, signagePoint) {
 		return nil, fmt.Errorf("fail 5")
 	}
-	return p.GetQualityString(plotId32), nil
+	return p.GetQualityString(&plotId32), nil
 }
 
-func (p ProofOfSpace) GetQualityString(plotId [32]byte) []byte {
+func (p ProofOfSpace) GetQualityString(plotId *HashDigest256) []byte {
 	// todo C++ chiapos
 	return nil
 }
 
-func (p ProofOfSpace) PassesPlotFilter(constants *ConsensusConstants, plotId, challengeHash, signagePoint [32]byte) bool {
+func (p ProofOfSpace) PassesPlotFilter(constants *ConsensusConstants, plotId, challengeHash, signagePoint *HashDigest256) bool {
 	input := p.CalculatePlotFilterInput(plotId, challengeHash, signagePoint)
 	for i := 0; i < constants.NumberZeroBitsPlotFilter; i++ {
 		if input[i] != 0 {
@@ -162,20 +144,20 @@ func (p ProofOfSpace) PassesPlotFilter(constants *ConsensusConstants, plotId, ch
 	return true
 }
 
-func (p ProofOfSpace) CalculatePlotFilterInput(plotId, challengeHash, signagePoint [32]byte) []byte {
-	return bls.CalculatePlotFilterInput(plotId, challengeHash, signagePoint)
+func (p ProofOfSpace) CalculatePlotFilterInput(plotId, challengeHash, signagePoint *HashDigest256) []byte {
+	return bls.CalculatePlotFilterInput(*plotId, *challengeHash, *signagePoint)
 }
 
-func (p ProofOfSpace) CalculatePosChallenge(plotId, challengeHash, signagePoint [32]byte) []byte {
-	return bls.CalculatePosChallenge(plotId, challengeHash, signagePoint)
+func (p ProofOfSpace) CalculatePosChallenge(plotId, challengeHash, signagePoint *HashDigest256) []byte {
+	return bls.CalculatePosChallenge(*plotId, *challengeHash, *signagePoint)
 }
 
 func (p ProofOfSpace) CalculatePlotIdPk(poolContractPuzzleHash, plotPublicKey *bls.PublicKey) []byte {
 	return bls.CalculatePlotIdPk(*poolContractPuzzleHash, *plotPublicKey)
 }
 
-func (p ProofOfSpace) CalculatePlotIdPh(poolContractPuzzleHash [32]byte, plotPublicKey *bls.PublicKey) []byte {
-	return bls.CalculatePlotIdPh(poolContractPuzzleHash, *plotPublicKey)
+func (p ProofOfSpace) CalculatePlotIdPh(poolContractPuzzleHash *HashDigest256, plotPublicKey *bls.PublicKey) []byte {
+	return bls.CalculatePlotIdPh(*poolContractPuzzleHash, *plotPublicKey)
 }
 
 func (p ProofOfSpace) GeneratePlotPublicKey(localPk, farmerPk *bls.PublicKey, includeTaproot bool) *bls.PublicKey {
