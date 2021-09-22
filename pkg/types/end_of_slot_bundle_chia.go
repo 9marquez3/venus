@@ -32,14 +32,23 @@ type InfusedChallengeChainSubSlot struct {
 // RewardChainSubSlot
 // class RewardChainSubSlot(Streamable):
 type RewardChainSubSlot struct {
-	// end_of_slot_vdf: VDFInfo
-	// challenge_chain_sub_slot_hash: bytes32
-	// infused_challenge_chain_sub_slot_hash: Optional[bytes32]
+	// endOfSlotVdf: VDFInfo
+	EndOfSlotVdf *VDFInfo
+	// challengeChainSubSlotHash: bytes32
+	ChallengeChainSubSlotHash [32]byte
+	// infusedChallengeChainSubSlotHash: Optional[bytes32]
+	InfusedChallengeChainSubSlotHash []byte
 	// deficit: uint8  # 16 or less. usually zero
+	Deficit uint8
 }
-// @dataclass(frozen=True)
-// @streamable
+// SubSlotProofs
 // class SubSlotProofs(Streamable):
-// challenge_chain_slot_proof: VDFProof
-// infused_challenge_chain_slot_proof: Optional[VDFProof]
-// reward_chain_slot_proof: VDFProof
+type SubSlotProofs struct {
+	// challengeChainSlotProof: VDFProof
+	challengeChainSlotProof *VDFInfo
+	// infusedChallengeChainSlotProof: Optional[VDFProof]
+	infusedChallengeChainSlotProof *VDFInfo
+	// rewardChainSlotProof: VDFProof
+	rewardChainSlotProof *VDFInfo
+}
+
