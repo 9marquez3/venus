@@ -1,5 +1,10 @@
 package types
 
+import (
+	"bytes"
+	"crypto/sha256"
+)
+
 // class FullBlock(Streamable):
 type FullBlockChia struct {
 	// # All the information required to validate a block
@@ -31,7 +36,9 @@ type FullBlockChia struct {
 	TransactionsGeneratorRefList []uint64
 }
 
+// SerializedProgram todo
 type SerializedProgram struct {
+	Buf []byte
 }
 
 func (f *FullBlockChia) PrevHeaderHash() *HashData {
@@ -51,7 +58,10 @@ func (f *FullBlockChia) TotalIters() BigInt {
 }
 
 func (f *FullBlockChia) HeaderHash() *HashData {
-	return nil
+	var buf bytes.Buffer
+	_ = f.Foliage.MarshalCBOR(&buf)
+	sum256 := sha256.Sum256(buf.Bytes())
+	return NewHashDataFromBytes(sum256[:])
 }
 
 func (f *FullBlockChia) IsTransactionBlock() bool {

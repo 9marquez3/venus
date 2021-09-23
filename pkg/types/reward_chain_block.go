@@ -28,6 +28,44 @@ func NewSignFromBytes(b []byte) *Signature {
 	return &Signature{d}
 }
 
+type PrivateKey struct {
+	Data [32]byte
+}
+
+func (p *PrivateKey) Bytes() []byte {
+	return p.Data[:]
+}
+
+func (p *PrivateKey) GetBlsPrivate() *bls.PrivateKey {
+	key:= bls.KeyFromBytes(p.Bytes())
+	return &key
+}
+
+func NewPrivateKeyFromBytes(b []byte) *PrivateKey {
+	var d [32]byte
+	copy(d[:], b)
+	return &PrivateKey{d}
+}
+
+type PublicKey struct {
+	Data [48]byte
+}
+
+func (p *PublicKey) Bytes() []byte {
+	return p.Data[:]
+}
+
+func (p *PublicKey) GetBlsPublic() *bls.PublicKey {
+	key ,_ := bls.NewPublicKey(p.Bytes())
+	return &key
+}
+
+func NewPublicKeyFromBytes(b []byte) *PublicKey {
+	var d [48]byte
+	copy(d[:], b)
+	return &PublicKey{d}
+}
+
 type HashData struct {
 	Data bls.HashDigest256
 }
@@ -115,11 +153,11 @@ type ProofOfSpace struct {
 	// challenge: bytes32
 	Challenge [32]byte
 	// pool_public_key: Optional[G1Element]  # Only one of these two should be present
-	PoolPublicKey *bls.PublicKey
+	PoolPublicKey *PublicKey
 	// pool_contract_puzzle_hash: Optional[bytes32]
 	PoolContractPuzzleHash *HashData
 	// plot_public_key: G1Element
-	PlotPublicKey *bls.PublicKey
+	PlotPublicKey *PublicKey
 	// size: uint8
 	Size uint8
 	// proof: bytes
@@ -187,22 +225,22 @@ func (p ProofOfSpace) CalculatePosChallenge(plotId, challengeHash, signagePoint 
 	return bls.CalculatePosChallenge(plotId.GetHashDate(), challengeHash.GetHashDate(), signagePoint.GetHashDate())
 }
 
-func (p ProofOfSpace) CalculatePlotIdPk(poolContractPuzzleHash, plotPublicKey *bls.PublicKey) []byte {
-	return bls.CalculatePlotIdPk(*poolContractPuzzleHash, *plotPublicKey)
+func (p ProofOfSpace) CalculatePlotIdPk(poolContractPuzzleHash, plotPublicKey *PublicKey) []byte {
+	return bls.CalculatePlotIdPk(*poolContractPuzzleHash.GetBlsPublic(), *plotPublicKey.GetBlsPublic())
 }
 
-func (p ProofOfSpace) CalculatePlotIdPh(poolContractPuzzleHash *HashData, plotPublicKey *bls.PublicKey) []byte {
-	return bls.CalculatePlotIdPh(poolContractPuzzleHash.GetHashDate(), *plotPublicKey)
+func (p ProofOfSpace) CalculatePlotIdPh(poolContractPuzzleHash *HashData, plotPublicKey *PublicKey) []byte {
+	return bls.CalculatePlotIdPh(poolContractPuzzleHash.GetHashDate(), *plotPublicKey.GetBlsPublic())
 }
 
-func (p ProofOfSpace) GeneratePlotPublicKey(localPk, farmerPk *bls.PublicKey, includeTaproot bool) *bls.PublicKey {
-	publicKey := bls.GeneratePlotPublicKey(*localPk, *farmerPk, includeTaproot)
-	return &publicKey
+func (p ProofOfSpace) GeneratePlotPublicKey(localPk, farmerPk *PublicKey, includeTaproot bool) *PublicKey {
+	publicKey := bls.GeneratePlotPublicKey(*localPk.GetBlsPublic(), *farmerPk.GetBlsPublic(), includeTaproot)
+	return NewPublicKeyFromBytes(publicKey.Bytes())
 }
 
-func (p ProofOfSpace) GenerateTaprootSk(localPk, farmerPk *bls.PublicKey) *bls.PrivateKey {
-	privateKey := bls.GenerateTaprootSk(*localPk, *farmerPk)
-	return &privateKey
+func (p ProofOfSpace) GenerateTaprootSk(localPk, farmerPk *PublicKey) *PrivateKey {
+	privateKey := bls.GenerateTaprootSk(*localPk.GetBlsPublic(), *farmerPk.GetBlsPublic())
+	return NewPrivateKeyFromBytes(privateKey.Bytes())
 }
 
 // VDFProof
@@ -226,12 +264,12 @@ type VDFInfo struct {
 }
 
 type ClassGroupElement struct {
-	data [100]byte
+	Data [100]byte
 }
 
 func (c ClassGroupElement) FromBytes(d []byte) ClassGroupElement {
 	var data ClassGroupElement
-	copy(data.data[:], d)
+	copy(data.Data[:], d)
 	return data
 }
 

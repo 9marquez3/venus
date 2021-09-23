@@ -37,12 +37,31 @@ func main() {
 		types.Ticket{},
 		types.ElectionProof{},
 		types.BlockMsg{},
-		// chia gen cbor
+		// chia Foliage gen cbor
 		types.HashData{},
 		types.Signature{},
 		types.PoolTarget{},
 		types.FoliageBlockData{},
 		types.Foliage{},
+		// chia EndOfSubSlotBundle gen cbor
+		types.VDFProof{},
+		types.ClassGroupElement{},
+		types.VDFInfo{},
+		types.ChallengeChainSubSlot{},
+		types.InfusedChallengeChainSubSlot{},
+		types.RewardChainSubSlot{},
+		types.SubSlotProofs{},
+		types.EndOfSubSlotBundle{},
+		// chia FullBlock gen cbor
+		types.PublicKey{},
+		types.PrivateKey{},
+		types.ProofOfSpace{},
+		types.RewardChainBlock{},
+		types.FoliageTransactionBlock{},
+		types.Coin{},
+		types.TransactionsInfo{},
+		types.SerializedProgram{},
+		types.FullBlockChia{},
 	); err != nil {
 		panic(err)
 	}

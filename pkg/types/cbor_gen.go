@@ -5,6 +5,7 @@ package types
 import (
 	"fmt"
 	"io"
+	"math"
 	"sort"
 
 	abi "github.com/filecoin-project/go-state-types/abi"
@@ -2021,5 +2022,2423 @@ func (t *Foliage) UnmarshalCBOR(r io.Reader) error {
 		}
 
 	}
+	return nil
+}
+
+var lengthBufVDFProof = []byte{131}
+
+func (t *VDFProof) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufVDFProof); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.WitnessType (uint8) (uint8)
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.WitnessType)); err != nil {
+		return err
+	}
+
+	// t.Witness ([]uint8) (slice)
+	if len(t.Witness) > cbg.ByteArrayMaxLen {
+		return xerrors.Errorf("Byte array in field t.Witness was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajByteString, uint64(len(t.Witness))); err != nil {
+		return err
+	}
+
+	if _, err := w.Write(t.Witness[:]); err != nil {
+		return err
+	}
+
+	// t.NormalizedToIdentity (bool) (bool)
+	if err := cbg.WriteBool(w, t.NormalizedToIdentity); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *VDFProof) UnmarshalCBOR(r io.Reader) error {
+	*t = VDFProof{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 3 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.WitnessType (uint8) (uint8)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajUnsignedInt {
+		return fmt.Errorf("wrong type for uint8 field")
+	}
+	if extra > math.MaxUint8 {
+		return fmt.Errorf("integer in input was too large for uint8 field")
+	}
+	t.WitnessType = uint8(extra)
+	// t.Witness ([]uint8) (slice)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+
+	if extra > cbg.ByteArrayMaxLen {
+		return fmt.Errorf("t.Witness: byte array too large (%d)", extra)
+	}
+	if maj != cbg.MajByteString {
+		return fmt.Errorf("expected byte array")
+	}
+
+	if extra > 0 {
+		t.Witness = make([]uint8, extra)
+	}
+
+	if _, err := io.ReadFull(br, t.Witness[:]); err != nil {
+		return err
+	}
+	// t.NormalizedToIdentity (bool) (bool)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajOther {
+		return fmt.Errorf("booleans must be major type 7")
+	}
+	switch extra {
+	case 20:
+		t.NormalizedToIdentity = false
+	case 21:
+		t.NormalizedToIdentity = true
+	default:
+		return fmt.Errorf("booleans are either major type 7, value 20 or 21 (got %d)", extra)
+	}
+	return nil
+}
+
+var lengthBufClassGroupElement = []byte{129}
+
+func (t *ClassGroupElement) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufClassGroupElement); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.Data ([100]uint8) (array)
+	if len(t.Data) > cbg.ByteArrayMaxLen {
+		return xerrors.Errorf("Byte array in field t.Data was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajByteString, uint64(len(t.Data))); err != nil {
+		return err
+	}
+
+	if _, err := w.Write(t.Data[:]); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *ClassGroupElement) UnmarshalCBOR(r io.Reader) error {
+	*t = ClassGroupElement{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 1 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.Data ([100]uint8) (array)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+
+	if extra > cbg.ByteArrayMaxLen {
+		return fmt.Errorf("t.Data: byte array too large (%d)", extra)
+	}
+	if maj != cbg.MajByteString {
+		return fmt.Errorf("expected byte array")
+	}
+
+	if extra != 100 {
+		return fmt.Errorf("expected array to have 100 elements")
+	}
+
+	t.Data = [100]uint8{}
+
+	if _, err := io.ReadFull(br, t.Data[:]); err != nil {
+		return err
+	}
+	return nil
+}
+
+var lengthBufVDFInfo = []byte{131}
+
+func (t *VDFInfo) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufVDFInfo); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.Challenge ([32]uint8) (array)
+	if len(t.Challenge) > cbg.ByteArrayMaxLen {
+		return xerrors.Errorf("Byte array in field t.Challenge was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajByteString, uint64(len(t.Challenge))); err != nil {
+		return err
+	}
+
+	if _, err := w.Write(t.Challenge[:]); err != nil {
+		return err
+	}
+
+	// t.NumberOfIterations (uint64) (uint64)
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.NumberOfIterations)); err != nil {
+		return err
+	}
+
+	// t.Output (types.ClassGroupElement) (struct)
+	if err := t.Output.MarshalCBOR(w); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *VDFInfo) UnmarshalCBOR(r io.Reader) error {
+	*t = VDFInfo{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 3 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.Challenge ([32]uint8) (array)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+
+	if extra > cbg.ByteArrayMaxLen {
+		return fmt.Errorf("t.Challenge: byte array too large (%d)", extra)
+	}
+	if maj != cbg.MajByteString {
+		return fmt.Errorf("expected byte array")
+	}
+
+	if extra != 32 {
+		return fmt.Errorf("expected array to have 32 elements")
+	}
+
+	t.Challenge = [32]uint8{}
+
+	if _, err := io.ReadFull(br, t.Challenge[:]); err != nil {
+		return err
+	}
+	// t.NumberOfIterations (uint64) (uint64)
+
+	{
+
+		maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+		if err != nil {
+			return err
+		}
+		if maj != cbg.MajUnsignedInt {
+			return fmt.Errorf("wrong type for uint64 field")
+		}
+		t.NumberOfIterations = uint64(extra)
+
+	}
+	// t.Output (types.ClassGroupElement) (struct)
+
+	{
+
+		if err := t.Output.UnmarshalCBOR(br); err != nil {
+			return xerrors.Errorf("unmarshaling t.Output: %w", err)
+		}
+
+	}
+	return nil
+}
+
+var lengthBufChallengeChainSubSlot = []byte{133}
+
+func (t *ChallengeChainSubSlot) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufChallengeChainSubSlot); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.ChallengeChainEndOfSlotVdf (types.VDFInfo) (struct)
+	if err := t.ChallengeChainEndOfSlotVdf.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.InfusedChallengeChainSubSlotHash (types.HashData) (struct)
+	if err := t.InfusedChallengeChainSubSlotHash.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.SubepochSummaryHash (types.HashData) (struct)
+	if err := t.SubepochSummaryHash.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.NewSubSlotIters (uint64) (uint64)
+
+	if t.NewSubSlotIters == nil {
+		if _, err := w.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(*t.NewSubSlotIters)); err != nil {
+			return err
+		}
+	}
+
+	// t.NewDifficulty (uint64) (uint64)
+
+	if t.NewDifficulty == nil {
+		if _, err := w.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(*t.NewDifficulty)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (t *ChallengeChainSubSlot) UnmarshalCBOR(r io.Reader) error {
+	*t = ChallengeChainSubSlot{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 5 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.ChallengeChainEndOfSlotVdf (types.VDFInfo) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.ChallengeChainEndOfSlotVdf = new(VDFInfo)
+			if err := t.ChallengeChainEndOfSlotVdf.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.ChallengeChainEndOfSlotVdf pointer: %w", err)
+			}
+		}
+
+	}
+	// t.InfusedChallengeChainSubSlotHash (types.HashData) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.InfusedChallengeChainSubSlotHash = new(HashData)
+			if err := t.InfusedChallengeChainSubSlotHash.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.InfusedChallengeChainSubSlotHash pointer: %w", err)
+			}
+		}
+
+	}
+	// t.SubepochSummaryHash (types.HashData) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.SubepochSummaryHash = new(HashData)
+			if err := t.SubepochSummaryHash.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.SubepochSummaryHash pointer: %w", err)
+			}
+		}
+
+	}
+	// t.NewSubSlotIters (uint64) (uint64)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+			if maj != cbg.MajUnsignedInt {
+				return fmt.Errorf("wrong type for uint64 field")
+			}
+			typed := uint64(extra)
+			t.NewSubSlotIters = &typed
+		}
+
+	}
+	// t.NewDifficulty (uint64) (uint64)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+			if maj != cbg.MajUnsignedInt {
+				return fmt.Errorf("wrong type for uint64 field")
+			}
+			typed := uint64(extra)
+			t.NewDifficulty = &typed
+		}
+
+	}
+	return nil
+}
+
+var lengthBufInfusedChallengeChainSubSlot = []byte{129}
+
+func (t *InfusedChallengeChainSubSlot) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufInfusedChallengeChainSubSlot); err != nil {
+		return err
+	}
+
+	// t.InfusedChallengeChainEndOfSlotVdf (types.VDFInfo) (struct)
+	if err := t.InfusedChallengeChainEndOfSlotVdf.MarshalCBOR(w); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *InfusedChallengeChainSubSlot) UnmarshalCBOR(r io.Reader) error {
+	*t = InfusedChallengeChainSubSlot{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 1 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.InfusedChallengeChainEndOfSlotVdf (types.VDFInfo) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.InfusedChallengeChainEndOfSlotVdf = new(VDFInfo)
+			if err := t.InfusedChallengeChainEndOfSlotVdf.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.InfusedChallengeChainEndOfSlotVdf pointer: %w", err)
+			}
+		}
+
+	}
+	return nil
+}
+
+var lengthBufRewardChainSubSlot = []byte{132}
+
+func (t *RewardChainSubSlot) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufRewardChainSubSlot); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.EndOfSlotVdf (types.VDFInfo) (struct)
+	if err := t.EndOfSlotVdf.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.ChallengeChainSubSlotHash (types.HashData) (struct)
+	if err := t.ChallengeChainSubSlotHash.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.InfusedChallengeChainSubSlotHash (types.HashData) (struct)
+	if err := t.InfusedChallengeChainSubSlotHash.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.Deficit (uint8) (uint8)
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.Deficit)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *RewardChainSubSlot) UnmarshalCBOR(r io.Reader) error {
+	*t = RewardChainSubSlot{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 4 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.EndOfSlotVdf (types.VDFInfo) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.EndOfSlotVdf = new(VDFInfo)
+			if err := t.EndOfSlotVdf.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.EndOfSlotVdf pointer: %w", err)
+			}
+		}
+
+	}
+	// t.ChallengeChainSubSlotHash (types.HashData) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.ChallengeChainSubSlotHash = new(HashData)
+			if err := t.ChallengeChainSubSlotHash.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.ChallengeChainSubSlotHash pointer: %w", err)
+			}
+		}
+
+	}
+	// t.InfusedChallengeChainSubSlotHash (types.HashData) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.InfusedChallengeChainSubSlotHash = new(HashData)
+			if err := t.InfusedChallengeChainSubSlotHash.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.InfusedChallengeChainSubSlotHash pointer: %w", err)
+			}
+		}
+
+	}
+	// t.Deficit (uint8) (uint8)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajUnsignedInt {
+		return fmt.Errorf("wrong type for uint8 field")
+	}
+	if extra > math.MaxUint8 {
+		return fmt.Errorf("integer in input was too large for uint8 field")
+	}
+	t.Deficit = uint8(extra)
+	return nil
+}
+
+var lengthBufSubSlotProofs = []byte{128}
+
+func (t *SubSlotProofs) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufSubSlotProofs); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t *SubSlotProofs) UnmarshalCBOR(r io.Reader) error {
+	*t = SubSlotProofs{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 0 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	return nil
+}
+
+var lengthBufEndOfSubSlotBundle = []byte{132}
+
+func (t *EndOfSubSlotBundle) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufEndOfSubSlotBundle); err != nil {
+		return err
+	}
+
+	// t.ChallengeChain (types.ChallengeChainSubSlot) (struct)
+	if err := t.ChallengeChain.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.InfusedChallengeChain (types.InfusedChallengeChainSubSlot) (struct)
+	if err := t.InfusedChallengeChain.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.RewardChain (types.RewardChainSubSlot) (struct)
+	if err := t.RewardChain.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.Proofs (types.SubSlotProofs) (struct)
+	if err := t.Proofs.MarshalCBOR(w); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *EndOfSubSlotBundle) UnmarshalCBOR(r io.Reader) error {
+	*t = EndOfSubSlotBundle{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 4 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.ChallengeChain (types.ChallengeChainSubSlot) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.ChallengeChain = new(ChallengeChainSubSlot)
+			if err := t.ChallengeChain.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.ChallengeChain pointer: %w", err)
+			}
+		}
+
+	}
+	// t.InfusedChallengeChain (types.InfusedChallengeChainSubSlot) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.InfusedChallengeChain = new(InfusedChallengeChainSubSlot)
+			if err := t.InfusedChallengeChain.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.InfusedChallengeChain pointer: %w", err)
+			}
+		}
+
+	}
+	// t.RewardChain (types.RewardChainSubSlot) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.RewardChain = new(RewardChainSubSlot)
+			if err := t.RewardChain.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.RewardChain pointer: %w", err)
+			}
+		}
+
+	}
+	// t.Proofs (types.SubSlotProofs) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.Proofs = new(SubSlotProofs)
+			if err := t.Proofs.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.Proofs pointer: %w", err)
+			}
+		}
+
+	}
+	return nil
+}
+
+var lengthBufPublicKey = []byte{129}
+
+func (t *PublicKey) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufPublicKey); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.Data ([48]uint8) (array)
+	if len(t.Data) > cbg.ByteArrayMaxLen {
+		return xerrors.Errorf("Byte array in field t.Data was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajByteString, uint64(len(t.Data))); err != nil {
+		return err
+	}
+
+	if _, err := w.Write(t.Data[:]); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *PublicKey) UnmarshalCBOR(r io.Reader) error {
+	*t = PublicKey{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 1 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.Data ([48]uint8) (array)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+
+	if extra > cbg.ByteArrayMaxLen {
+		return fmt.Errorf("t.Data: byte array too large (%d)", extra)
+	}
+	if maj != cbg.MajByteString {
+		return fmt.Errorf("expected byte array")
+	}
+
+	if extra != 48 {
+		return fmt.Errorf("expected array to have 48 elements")
+	}
+
+	t.Data = [48]uint8{}
+
+	if _, err := io.ReadFull(br, t.Data[:]); err != nil {
+		return err
+	}
+	return nil
+}
+
+var lengthBufPrivateKey = []byte{129}
+
+func (t *PrivateKey) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufPrivateKey); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.Data ([32]uint8) (array)
+	if len(t.Data) > cbg.ByteArrayMaxLen {
+		return xerrors.Errorf("Byte array in field t.Data was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajByteString, uint64(len(t.Data))); err != nil {
+		return err
+	}
+
+	if _, err := w.Write(t.Data[:]); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *PrivateKey) UnmarshalCBOR(r io.Reader) error {
+	*t = PrivateKey{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 1 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.Data ([32]uint8) (array)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+
+	if extra > cbg.ByteArrayMaxLen {
+		return fmt.Errorf("t.Data: byte array too large (%d)", extra)
+	}
+	if maj != cbg.MajByteString {
+		return fmt.Errorf("expected byte array")
+	}
+
+	if extra != 32 {
+		return fmt.Errorf("expected array to have 32 elements")
+	}
+
+	t.Data = [32]uint8{}
+
+	if _, err := io.ReadFull(br, t.Data[:]); err != nil {
+		return err
+	}
+	return nil
+}
+
+var lengthBufProofOfSpace = []byte{134}
+
+func (t *ProofOfSpace) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufProofOfSpace); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.Challenge ([32]uint8) (array)
+	if len(t.Challenge) > cbg.ByteArrayMaxLen {
+		return xerrors.Errorf("Byte array in field t.Challenge was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajByteString, uint64(len(t.Challenge))); err != nil {
+		return err
+	}
+
+	if _, err := w.Write(t.Challenge[:]); err != nil {
+		return err
+	}
+
+	// t.PoolPublicKey (types.PublicKey) (struct)
+	if err := t.PoolPublicKey.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.PoolContractPuzzleHash (types.HashData) (struct)
+	if err := t.PoolContractPuzzleHash.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.PlotPublicKey (types.PublicKey) (struct)
+	if err := t.PlotPublicKey.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.Size (uint8) (uint8)
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.Size)); err != nil {
+		return err
+	}
+
+	// t.Proof ([]uint8) (slice)
+	if len(t.Proof) > cbg.ByteArrayMaxLen {
+		return xerrors.Errorf("Byte array in field t.Proof was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajByteString, uint64(len(t.Proof))); err != nil {
+		return err
+	}
+
+	if _, err := w.Write(t.Proof[:]); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *ProofOfSpace) UnmarshalCBOR(r io.Reader) error {
+	*t = ProofOfSpace{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 6 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.Challenge ([32]uint8) (array)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+
+	if extra > cbg.ByteArrayMaxLen {
+		return fmt.Errorf("t.Challenge: byte array too large (%d)", extra)
+	}
+	if maj != cbg.MajByteString {
+		return fmt.Errorf("expected byte array")
+	}
+
+	if extra != 32 {
+		return fmt.Errorf("expected array to have 32 elements")
+	}
+
+	t.Challenge = [32]uint8{}
+
+	if _, err := io.ReadFull(br, t.Challenge[:]); err != nil {
+		return err
+	}
+	// t.PoolPublicKey (types.PublicKey) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.PoolPublicKey = new(PublicKey)
+			if err := t.PoolPublicKey.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.PoolPublicKey pointer: %w", err)
+			}
+		}
+
+	}
+	// t.PoolContractPuzzleHash (types.HashData) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.PoolContractPuzzleHash = new(HashData)
+			if err := t.PoolContractPuzzleHash.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.PoolContractPuzzleHash pointer: %w", err)
+			}
+		}
+
+	}
+	// t.PlotPublicKey (types.PublicKey) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.PlotPublicKey = new(PublicKey)
+			if err := t.PlotPublicKey.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.PlotPublicKey pointer: %w", err)
+			}
+		}
+
+	}
+	// t.Size (uint8) (uint8)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajUnsignedInt {
+		return fmt.Errorf("wrong type for uint8 field")
+	}
+	if extra > math.MaxUint8 {
+		return fmt.Errorf("integer in input was too large for uint8 field")
+	}
+	t.Size = uint8(extra)
+	// t.Proof ([]uint8) (slice)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+
+	if extra > cbg.ByteArrayMaxLen {
+		return fmt.Errorf("t.Proof: byte array too large (%d)", extra)
+	}
+	if maj != cbg.MajByteString {
+		return fmt.Errorf("expected byte array")
+	}
+
+	if extra > 0 {
+		t.Proof = make([]uint8, extra)
+	}
+
+	if _, err := io.ReadFull(br, t.Proof[:]); err != nil {
+		return err
+	}
+	return nil
+}
+
+var lengthBufRewardChainBlock = []byte{142}
+
+func (t *RewardChainBlock) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufRewardChainBlock); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.Weight (big.Int) (struct)
+	if err := t.Weight.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.Height (uint64) (uint64)
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.Height)); err != nil {
+		return err
+	}
+
+	// t.TotalIters (big.Int) (struct)
+	if err := t.TotalIters.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.SignagePointIndex (uint8) (uint8)
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.SignagePointIndex)); err != nil {
+		return err
+	}
+
+	// t.PosSsCcChallengeHash (types.HashData) (struct)
+	if err := t.PosSsCcChallengeHash.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.ProofOfSpace (types.ProofOfSpace) (struct)
+	if err := t.ProofOfSpace.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.ChallengeChainSpVdf (types.VDFInfo) (struct)
+	if err := t.ChallengeChainSpVdf.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.ChallengeChainSpSignature (types.Signature) (struct)
+	if err := t.ChallengeChainSpSignature.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.ChallengeChainIpVdf (types.VDFInfo) (struct)
+	if err := t.ChallengeChainIpVdf.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.RewardChainSpVdf (types.VDFInfo) (struct)
+	if err := t.RewardChainSpVdf.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.RewardChainSpSignature (types.Signature) (struct)
+	if err := t.RewardChainSpSignature.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.RewardChainIpVdf (types.VDFInfo) (struct)
+	if err := t.RewardChainIpVdf.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.InfusedChallengeChainIpVdf (types.VDFInfo) (struct)
+	if err := t.InfusedChallengeChainIpVdf.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.IsTransactionBlock (bool) (bool)
+	if err := cbg.WriteBool(w, t.IsTransactionBlock); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *RewardChainBlock) UnmarshalCBOR(r io.Reader) error {
+	*t = RewardChainBlock{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 14 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.Weight (big.Int) (struct)
+
+	{
+
+		if err := t.Weight.UnmarshalCBOR(br); err != nil {
+			return xerrors.Errorf("unmarshaling t.Weight: %w", err)
+		}
+
+	}
+	// t.Height (uint64) (uint64)
+
+	{
+
+		maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+		if err != nil {
+			return err
+		}
+		if maj != cbg.MajUnsignedInt {
+			return fmt.Errorf("wrong type for uint64 field")
+		}
+		t.Height = uint64(extra)
+
+	}
+	// t.TotalIters (big.Int) (struct)
+
+	{
+
+		if err := t.TotalIters.UnmarshalCBOR(br); err != nil {
+			return xerrors.Errorf("unmarshaling t.TotalIters: %w", err)
+		}
+
+	}
+	// t.SignagePointIndex (uint8) (uint8)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajUnsignedInt {
+		return fmt.Errorf("wrong type for uint8 field")
+	}
+	if extra > math.MaxUint8 {
+		return fmt.Errorf("integer in input was too large for uint8 field")
+	}
+	t.SignagePointIndex = uint8(extra)
+	// t.PosSsCcChallengeHash (types.HashData) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.PosSsCcChallengeHash = new(HashData)
+			if err := t.PosSsCcChallengeHash.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.PosSsCcChallengeHash pointer: %w", err)
+			}
+		}
+
+	}
+	// t.ProofOfSpace (types.ProofOfSpace) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.ProofOfSpace = new(ProofOfSpace)
+			if err := t.ProofOfSpace.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.ProofOfSpace pointer: %w", err)
+			}
+		}
+
+	}
+	// t.ChallengeChainSpVdf (types.VDFInfo) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.ChallengeChainSpVdf = new(VDFInfo)
+			if err := t.ChallengeChainSpVdf.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.ChallengeChainSpVdf pointer: %w", err)
+			}
+		}
+
+	}
+	// t.ChallengeChainSpSignature (types.Signature) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.ChallengeChainSpSignature = new(Signature)
+			if err := t.ChallengeChainSpSignature.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.ChallengeChainSpSignature pointer: %w", err)
+			}
+		}
+
+	}
+	// t.ChallengeChainIpVdf (types.VDFInfo) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.ChallengeChainIpVdf = new(VDFInfo)
+			if err := t.ChallengeChainIpVdf.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.ChallengeChainIpVdf pointer: %w", err)
+			}
+		}
+
+	}
+	// t.RewardChainSpVdf (types.VDFInfo) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.RewardChainSpVdf = new(VDFInfo)
+			if err := t.RewardChainSpVdf.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.RewardChainSpVdf pointer: %w", err)
+			}
+		}
+
+	}
+	// t.RewardChainSpSignature (types.Signature) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.RewardChainSpSignature = new(Signature)
+			if err := t.RewardChainSpSignature.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.RewardChainSpSignature pointer: %w", err)
+			}
+		}
+
+	}
+	// t.RewardChainIpVdf (types.VDFInfo) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.RewardChainIpVdf = new(VDFInfo)
+			if err := t.RewardChainIpVdf.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.RewardChainIpVdf pointer: %w", err)
+			}
+		}
+
+	}
+	// t.InfusedChallengeChainIpVdf (types.VDFInfo) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.InfusedChallengeChainIpVdf = new(VDFInfo)
+			if err := t.InfusedChallengeChainIpVdf.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.InfusedChallengeChainIpVdf pointer: %w", err)
+			}
+		}
+
+	}
+	// t.IsTransactionBlock (bool) (bool)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajOther {
+		return fmt.Errorf("booleans must be major type 7")
+	}
+	switch extra {
+	case 20:
+		t.IsTransactionBlock = false
+	case 21:
+		t.IsTransactionBlock = true
+	default:
+		return fmt.Errorf("booleans are either major type 7, value 20 or 21 (got %d)", extra)
+	}
+	return nil
+}
+
+var lengthBufFoliageTransactionBlock = []byte{134}
+
+func (t *FoliageTransactionBlock) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufFoliageTransactionBlock); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.PrevTransactionBlockHash (types.HashData) (struct)
+	if err := t.PrevTransactionBlockHash.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.Timestamp (uint64) (uint64)
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.Timestamp)); err != nil {
+		return err
+	}
+
+	// t.FilterHash (types.HashData) (struct)
+	if err := t.FilterHash.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.AdditionsRoot (types.HashData) (struct)
+	if err := t.AdditionsRoot.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.RemovalsRoot (types.HashData) (struct)
+	if err := t.RemovalsRoot.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.TransactionsInfoHash (types.HashData) (struct)
+	if err := t.TransactionsInfoHash.MarshalCBOR(w); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *FoliageTransactionBlock) UnmarshalCBOR(r io.Reader) error {
+	*t = FoliageTransactionBlock{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 6 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.PrevTransactionBlockHash (types.HashData) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.PrevTransactionBlockHash = new(HashData)
+			if err := t.PrevTransactionBlockHash.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.PrevTransactionBlockHash pointer: %w", err)
+			}
+		}
+
+	}
+	// t.Timestamp (uint64) (uint64)
+
+	{
+
+		maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+		if err != nil {
+			return err
+		}
+		if maj != cbg.MajUnsignedInt {
+			return fmt.Errorf("wrong type for uint64 field")
+		}
+		t.Timestamp = uint64(extra)
+
+	}
+	// t.FilterHash (types.HashData) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.FilterHash = new(HashData)
+			if err := t.FilterHash.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.FilterHash pointer: %w", err)
+			}
+		}
+
+	}
+	// t.AdditionsRoot (types.HashData) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.AdditionsRoot = new(HashData)
+			if err := t.AdditionsRoot.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.AdditionsRoot pointer: %w", err)
+			}
+		}
+
+	}
+	// t.RemovalsRoot (types.HashData) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.RemovalsRoot = new(HashData)
+			if err := t.RemovalsRoot.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.RemovalsRoot pointer: %w", err)
+			}
+		}
+
+	}
+	// t.TransactionsInfoHash (types.HashData) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.TransactionsInfoHash = new(HashData)
+			if err := t.TransactionsInfoHash.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.TransactionsInfoHash pointer: %w", err)
+			}
+		}
+
+	}
+	return nil
+}
+
+var lengthBufCoin = []byte{131}
+
+func (t *Coin) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufCoin); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.ParentCoinInfo ([32]uint8) (array)
+	if len(t.ParentCoinInfo) > cbg.ByteArrayMaxLen {
+		return xerrors.Errorf("Byte array in field t.ParentCoinInfo was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajByteString, uint64(len(t.ParentCoinInfo))); err != nil {
+		return err
+	}
+
+	if _, err := w.Write(t.ParentCoinInfo[:]); err != nil {
+		return err
+	}
+
+	// t.PuzzleHash (types.HashData) (struct)
+	if err := t.PuzzleHash.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.Amount (uint64) (uint64)
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.Amount)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t *Coin) UnmarshalCBOR(r io.Reader) error {
+	*t = Coin{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 3 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.ParentCoinInfo ([32]uint8) (array)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+
+	if extra > cbg.ByteArrayMaxLen {
+		return fmt.Errorf("t.ParentCoinInfo: byte array too large (%d)", extra)
+	}
+	if maj != cbg.MajByteString {
+		return fmt.Errorf("expected byte array")
+	}
+
+	if extra != 32 {
+		return fmt.Errorf("expected array to have 32 elements")
+	}
+
+	t.ParentCoinInfo = [32]uint8{}
+
+	if _, err := io.ReadFull(br, t.ParentCoinInfo[:]); err != nil {
+		return err
+	}
+	// t.PuzzleHash (types.HashData) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.PuzzleHash = new(HashData)
+			if err := t.PuzzleHash.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.PuzzleHash pointer: %w", err)
+			}
+		}
+
+	}
+	// t.Amount (uint64) (uint64)
+
+	{
+
+		maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+		if err != nil {
+			return err
+		}
+		if maj != cbg.MajUnsignedInt {
+			return fmt.Errorf("wrong type for uint64 field")
+		}
+		t.Amount = uint64(extra)
+
+	}
+	return nil
+}
+
+var lengthBufTransactionsInfo = []byte{134}
+
+func (t *TransactionsInfo) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufTransactionsInfo); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.GeneratorRoot (types.HashData) (struct)
+	if err := t.GeneratorRoot.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.GeneratorRefsRoot (types.HashData) (struct)
+	if err := t.GeneratorRefsRoot.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.AggregatedSignature (types.Signature) (struct)
+	if err := t.AggregatedSignature.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.Fees (uint64) (uint64)
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.Fees)); err != nil {
+		return err
+	}
+
+	// t.Cost (uint64) (uint64)
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.Cost)); err != nil {
+		return err
+	}
+
+	// t.RewardClaimsInCorporated ([]*types.Coin) (slice)
+	if len(t.RewardClaimsInCorporated) > cbg.MaxLength {
+		return xerrors.Errorf("Slice value in field t.RewardClaimsInCorporated was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajArray, uint64(len(t.RewardClaimsInCorporated))); err != nil {
+		return err
+	}
+	for _, v := range t.RewardClaimsInCorporated {
+		if err := v.MarshalCBOR(w); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (t *TransactionsInfo) UnmarshalCBOR(r io.Reader) error {
+	*t = TransactionsInfo{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 6 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.GeneratorRoot (types.HashData) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.GeneratorRoot = new(HashData)
+			if err := t.GeneratorRoot.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.GeneratorRoot pointer: %w", err)
+			}
+		}
+
+	}
+	// t.GeneratorRefsRoot (types.HashData) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.GeneratorRefsRoot = new(HashData)
+			if err := t.GeneratorRefsRoot.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.GeneratorRefsRoot pointer: %w", err)
+			}
+		}
+
+	}
+	// t.AggregatedSignature (types.Signature) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.AggregatedSignature = new(Signature)
+			if err := t.AggregatedSignature.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.AggregatedSignature pointer: %w", err)
+			}
+		}
+
+	}
+	// t.Fees (uint64) (uint64)
+
+	{
+
+		maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+		if err != nil {
+			return err
+		}
+		if maj != cbg.MajUnsignedInt {
+			return fmt.Errorf("wrong type for uint64 field")
+		}
+		t.Fees = uint64(extra)
+
+	}
+	// t.Cost (uint64) (uint64)
+
+	{
+
+		maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+		if err != nil {
+			return err
+		}
+		if maj != cbg.MajUnsignedInt {
+			return fmt.Errorf("wrong type for uint64 field")
+		}
+		t.Cost = uint64(extra)
+
+	}
+	// t.RewardClaimsInCorporated ([]*types.Coin) (slice)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("t.RewardClaimsInCorporated: array too large (%d)", extra)
+	}
+
+	if maj != cbg.MajArray {
+		return fmt.Errorf("expected cbor array")
+	}
+
+	if extra > 0 {
+		t.RewardClaimsInCorporated = make([]*Coin, extra)
+	}
+
+	for i := 0; i < int(extra); i++ {
+
+		var v Coin
+		if err := v.UnmarshalCBOR(br); err != nil {
+			return err
+		}
+
+		t.RewardClaimsInCorporated[i] = &v
+	}
+
+	return nil
+}
+
+var lengthBufSerializedProgram = []byte{129}
+
+func (t *SerializedProgram) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufSerializedProgram); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.Buf ([]uint8) (slice)
+	if len(t.Buf) > cbg.ByteArrayMaxLen {
+		return xerrors.Errorf("Byte array in field t.Buf was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajByteString, uint64(len(t.Buf))); err != nil {
+		return err
+	}
+
+	if _, err := w.Write(t.Buf[:]); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *SerializedProgram) UnmarshalCBOR(r io.Reader) error {
+	*t = SerializedProgram{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 1 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.Buf ([]uint8) (slice)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+
+	if extra > cbg.ByteArrayMaxLen {
+		return fmt.Errorf("t.Buf: byte array too large (%d)", extra)
+	}
+	if maj != cbg.MajByteString {
+		return fmt.Errorf("expected byte array")
+	}
+
+	if extra > 0 {
+		t.Buf = make([]uint8, extra)
+	}
+
+	if _, err := io.ReadFull(br, t.Buf[:]); err != nil {
+		return err
+	}
+	return nil
+}
+
+var lengthBufFullBlockChia = []byte{140}
+
+func (t *FullBlockChia) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufFullBlockChia); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.FinishedSubSlots ([]*types.EndOfSubSlotBundle) (slice)
+	if len(t.FinishedSubSlots) > cbg.MaxLength {
+		return xerrors.Errorf("Slice value in field t.FinishedSubSlots was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajArray, uint64(len(t.FinishedSubSlots))); err != nil {
+		return err
+	}
+	for _, v := range t.FinishedSubSlots {
+		if err := v.MarshalCBOR(w); err != nil {
+			return err
+		}
+	}
+
+	// t.RewardChainBlock (types.RewardChainBlock) (struct)
+	if err := t.RewardChainBlock.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.ChallengeChainSpProof (types.VDFProof) (struct)
+	if err := t.ChallengeChainSpProof.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.ChallengeChainIpProof (types.VDFProof) (struct)
+	if err := t.ChallengeChainIpProof.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.RewardChainSpProof (types.VDFProof) (struct)
+	if err := t.RewardChainSpProof.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.RewardChainIpProof (types.VDFProof) (struct)
+	if err := t.RewardChainIpProof.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.InfusedChallengeChainIpProof (types.VDFProof) (struct)
+	if err := t.InfusedChallengeChainIpProof.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.Foliage (types.Foliage) (struct)
+	if err := t.Foliage.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.FoliageTransactionBlock (types.FoliageTransactionBlock) (struct)
+	if err := t.FoliageTransactionBlock.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.TransactionsInfo (types.TransactionsInfo) (struct)
+	if err := t.TransactionsInfo.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.TransactionsGenerator (types.SerializedProgram) (struct)
+	if err := t.TransactionsGenerator.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.TransactionsGeneratorRefList ([]uint64) (slice)
+	if len(t.TransactionsGeneratorRefList) > cbg.MaxLength {
+		return xerrors.Errorf("Slice value in field t.TransactionsGeneratorRefList was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajArray, uint64(len(t.TransactionsGeneratorRefList))); err != nil {
+		return err
+	}
+	for _, v := range t.TransactionsGeneratorRefList {
+		if err := cbg.CborWriteHeader(w, cbg.MajUnsignedInt, uint64(v)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (t *FullBlockChia) UnmarshalCBOR(r io.Reader) error {
+	*t = FullBlockChia{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 12 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.FinishedSubSlots ([]*types.EndOfSubSlotBundle) (slice)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("t.FinishedSubSlots: array too large (%d)", extra)
+	}
+
+	if maj != cbg.MajArray {
+		return fmt.Errorf("expected cbor array")
+	}
+
+	if extra > 0 {
+		t.FinishedSubSlots = make([]*EndOfSubSlotBundle, extra)
+	}
+
+	for i := 0; i < int(extra); i++ {
+
+		var v EndOfSubSlotBundle
+		if err := v.UnmarshalCBOR(br); err != nil {
+			return err
+		}
+
+		t.FinishedSubSlots[i] = &v
+	}
+
+	// t.RewardChainBlock (types.RewardChainBlock) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.RewardChainBlock = new(RewardChainBlock)
+			if err := t.RewardChainBlock.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.RewardChainBlock pointer: %w", err)
+			}
+		}
+
+	}
+	// t.ChallengeChainSpProof (types.VDFProof) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.ChallengeChainSpProof = new(VDFProof)
+			if err := t.ChallengeChainSpProof.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.ChallengeChainSpProof pointer: %w", err)
+			}
+		}
+
+	}
+	// t.ChallengeChainIpProof (types.VDFProof) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.ChallengeChainIpProof = new(VDFProof)
+			if err := t.ChallengeChainIpProof.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.ChallengeChainIpProof pointer: %w", err)
+			}
+		}
+
+	}
+	// t.RewardChainSpProof (types.VDFProof) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.RewardChainSpProof = new(VDFProof)
+			if err := t.RewardChainSpProof.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.RewardChainSpProof pointer: %w", err)
+			}
+		}
+
+	}
+	// t.RewardChainIpProof (types.VDFProof) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.RewardChainIpProof = new(VDFProof)
+			if err := t.RewardChainIpProof.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.RewardChainIpProof pointer: %w", err)
+			}
+		}
+
+	}
+	// t.InfusedChallengeChainIpProof (types.VDFProof) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.InfusedChallengeChainIpProof = new(VDFProof)
+			if err := t.InfusedChallengeChainIpProof.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.InfusedChallengeChainIpProof pointer: %w", err)
+			}
+		}
+
+	}
+	// t.Foliage (types.Foliage) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.Foliage = new(Foliage)
+			if err := t.Foliage.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.Foliage pointer: %w", err)
+			}
+		}
+
+	}
+	// t.FoliageTransactionBlock (types.FoliageTransactionBlock) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.FoliageTransactionBlock = new(FoliageTransactionBlock)
+			if err := t.FoliageTransactionBlock.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.FoliageTransactionBlock pointer: %w", err)
+			}
+		}
+
+	}
+	// t.TransactionsInfo (types.TransactionsInfo) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.TransactionsInfo = new(TransactionsInfo)
+			if err := t.TransactionsInfo.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.TransactionsInfo pointer: %w", err)
+			}
+		}
+
+	}
+	// t.TransactionsGenerator (types.SerializedProgram) (struct)
+
+	{
+
+		b, err := br.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
+				return err
+			}
+			t.TransactionsGenerator = new(SerializedProgram)
+			if err := t.TransactionsGenerator.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.TransactionsGenerator pointer: %w", err)
+			}
+		}
+
+	}
+	// t.TransactionsGeneratorRefList ([]uint64) (slice)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("t.TransactionsGeneratorRefList: array too large (%d)", extra)
+	}
+
+	if maj != cbg.MajArray {
+		return fmt.Errorf("expected cbor array")
+	}
+
+	if extra > 0 {
+		t.TransactionsGeneratorRefList = make([]uint64, extra)
+	}
+
+	for i := 0; i < int(extra); i++ {
+
+		maj, val, err := cbg.CborReadHeaderBuf(br, scratch)
+		if err != nil {
+			return xerrors.Errorf("failed to read uint64 for t.TransactionsGeneratorRefList slice: %w", err)
+		}
+
+		if maj != cbg.MajUnsignedInt {
+			return xerrors.Errorf("value read for array t.TransactionsGeneratorRefList was not a uint, instead got %d", maj)
+		}
+
+		t.TransactionsGeneratorRefList[i] = uint64(val)
+	}
+
 	return nil
 }
