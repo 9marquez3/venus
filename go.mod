@@ -11,7 +11,7 @@ require (
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/awnumar/memguard v0.22.2
 	github.com/bluele/gcache v0.0.0-20190518031135-bc40bd653833
-	github.com/cnc-project/cnc-bls v1.0.2
+	github.com/cnc-project/cnc-bls v1.0.3
 	github.com/cskr/pubsub v1.0.2
 	github.com/detailyang/go-fallocate v0.0.0-20180908115635-432fa640bd2e
 	github.com/dgraph-io/badger/v2 v2.2007.2
@@ -140,7 +140,6 @@ require (
 )
 
 replace (
-	github.com/cnc-project/cnc-bls => ../cnc-bls
 	github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi
 	github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210721095535-a67dff16de21
 	github.com/filecoin-project/test-vectors => ./extern/test-vectors
