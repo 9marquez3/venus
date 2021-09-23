@@ -6,7 +6,6 @@ import (
 	"github.com/filecoin-project/venus/pkg/discovery"
 	"github.com/filecoin-project/venus/pkg/market"
 	"github.com/filecoin-project/venus/pkg/paychmgr"
-	"github.com/filecoin-project/venus/pkg/state/tree"
 	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/filecoin-project/venus/pkg/vm/dispatch"
 	gen "github.com/whyrusleeping/cbor-gen"
@@ -38,6 +37,12 @@ func main() {
 		types.Ticket{},
 		types.ElectionProof{},
 		types.BlockMsg{},
+		// chia gen cbor
+		types.HashData{},
+		types.Signature{},
+		types.PoolTarget{},
+		types.FoliageBlockData{},
+		types.Foliage{},
 	); err != nil {
 		panic(err)
 	}
@@ -61,11 +66,11 @@ func main() {
 		panic(err)
 	}
 
-	if err := gen.WriteTupleEncodersToFile("./pkg/vm/state/cbor_gen.go", "state",
-		tree.StateRoot{},
-	); err != nil {
-		panic(err)
-	}
+	// if err := gen.WriteTupleEncodersToFile("./pkg/vm/state/cbor_gen.go", "state",
+	// 	tree.StateRoot{},
+	// ); err != nil {
+	// 	panic(err)
+	// }
 
 	if err := gen.WriteTupleEncodersToFile("./pkg/chainsync/exchange/cbor_gen.go", "exchange",
 		exchange.Request{},

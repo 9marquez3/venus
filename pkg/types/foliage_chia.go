@@ -9,9 +9,9 @@ import (
 type TransactionsInfo struct {
 	// # Information that goes along with each transaction block
 	// generatorRoot: bytes32  # sha256 of the block generator in this block
-	GeneratorRoot *HashDigest256
+	GeneratorRoot *HashData
 	// generatorRefsRoot: bytes32  # sha256 of the concatenation of the generator ref list entries
-	GeneratorRefsRoot *HashDigest256
+	GeneratorRefsRoot *HashData
 	// aggregatedSignature: G2Element
 	AggregatedSignature *Signature
 	// fees: uint64  # This only includes user fees, not block rewards
@@ -27,7 +27,7 @@ type Coin struct {
 	// parentCoinInfo: bytes32  # down with this sort of thing.
 	ParentCoinInfo [32]byte
 	// puzzleHash: bytes32
-	PuzzleHash *HashDigest256
+	PuzzleHash *HashData
 	// amount: uint64
 	Amount uint64
 }
@@ -42,23 +42,22 @@ type Coin struct {
 // these hashes easily.
 func (c *Coin) GetHash() [32]byte {
 	bytes := make([]byte, 32*2)
-	copy(bytes,c.ParentCoinInfo[:])
-	copy(bytes[32:],c.PuzzleHash[:])
-	return sha256.Sum256(append(bytes,intToBytes(c.Amount)...))
+	copy(bytes, c.ParentCoinInfo[:])
+	copy(bytes[32:], c.PuzzleHash.Bytes())
+	return sha256.Sum256(append(bytes, intToBytes(c.Amount)...))
 }
 
 func (c *Coin) Name() [32]byte {
 	return c.GetHash()
 }
 
-
 // AsList return List[self.parent_coin_info, self.puzzle_hash, self.amount -> ([]byte)]
 func (c *Coin) AsList() [][]byte {
 	bytes := make([][]byte, 0)
 	bytes = append(bytes, c.ParentCoinInfo[:])
-	bytes = append(bytes, c.PuzzleHash[:])
-	d := make([]byte,8)
-	binary.BigEndian.PutUint64(d,c.Amount)
+	bytes = append(bytes, c.PuzzleHash.Bytes())
+	d := make([]byte, 8)
+	binary.BigEndian.PutUint64(d, c.Amount)
 	bytes = append(bytes, d)
 	return bytes
 }
@@ -73,16 +72,34 @@ func intToBytes(v uint64) []byte {
 	if v == 0 {
 		return nil
 	}
-	d := make([]byte,8)
-	binary.BigEndian.PutUint64(d,v)
+	d := make([]byte, 8)
+	binary.BigEndian.PutUint64(d, v)
 
 	for d[0] == 0 {
 		d = d[1:]
 	}
 
-	data := make([]byte,len(d))
-	copy(data,d)
+	data := make([]byte, len(d))
+	copy(data, d)
 	return data
+}
+
+// FoliageTransactionBlock
+// class FoliageTransactionBlock(Streamable):
+type FoliageTransactionBlock struct {
+	// # Information that goes along with each transaction block that is relevant for light clients
+	// prevTransactionBlockHash: bytes32
+	PrevTransactionBlockHash *HashData
+	// timestamp: uint64
+	Timestamp uint64
+	// filterHash: bytes32
+	FilterHash *HashData
+	// additionsRoot: bytes32
+	AdditionsRoot *HashData
+	// removalsRoot: bytes32
+	RemovalsRoot *HashData
+	// transactionsInfoHash: bytes32
+	TransactionsInfoHash *HashData
 }
 
 // Foliage
@@ -93,15 +110,15 @@ func intToBytes(v uint64) []byte {
 // Is the prev from the signage point, and can be replaced with a more recent block
 type Foliage struct {
 	// prevBlockHash: bytes32
-	PrevBlockHash *HashDigest256
+	PrevBlockHash *HashData
 	// rewardBlockHash: bytes32
-	RewardBlockHash *HashDigest256
+	RewardBlockHash *HashData
 	// foliageBlockData: FoliageBlockData
 	FoliageBlockData *FoliageBlockData
 	// foliageBlockDataSignature: G2Element
 	FoliageBlockDataSignature *Signature
 	// foliageTransactionBlockHash: Optional[bytes32]
-	FoliageTransactionBlockHash *HashDigest256
+	FoliageTransactionBlockHash *HashData
 	// foliageTransactionBlockSignature: Optional[G2Element] (optional use golang pointer)
 	FoliageTransactionBlockSignature *Signature
 }
@@ -110,20 +127,20 @@ type Foliage struct {
 // Part of the block that is signed by the plot key
 type FoliageBlockData struct {
 	// unfinishedRewardBlockHash: bytes32
-	UnfinishedRewardBlockHash *HashDigest256
+	UnfinishedRewardBlockHash *HashData
 	// poolTarget: PoolTarget
 	PoolTarget *PoolTarget
 	// poolSignature: Optional[G2Element]  # Iff ProofOfSpace has a pool pk (optional use golang pointer)
 	PoolSignature []byte
 	// farmerRewardPuzzleHash: bytes32
-	FarmerRewardPuzzleHash *HashDigest256
+	FarmerRewardPuzzleHash *HashData
 	// extensionData: bytes32  # Used for future updates. Can be any 32 byte value initially
 	ExtensionData [32]byte
 }
 
 type PoolTarget struct {
 	// puzzleHash: bytes32
-	PuzzleHash *HashDigest256
+	PuzzleHash *HashData
 	// maxHeight: uint32  # A max height of 0 means it is valid forever
-	MaxHeight uint32
+	MaxHeight uint64
 }
