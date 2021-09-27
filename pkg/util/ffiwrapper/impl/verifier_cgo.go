@@ -112,11 +112,13 @@ type proofVerifier struct{}
 var ProofVerifier = proofVerifier{}
 
 func (proofVerifier) VerifySeal(info proof5.SealVerifyInfo) (bool, error) {
-	return ffi.VerifySeal(info)
+	// return ffi.VerifySeal(info)
+	return false,nil
 }
 
 func (verifier proofVerifier) VerifyAggregateSeals(aggregate proof5.AggregateSealVerifyProofAndInfos) (bool, error) {
-	return ffi.VerifyAggregateSeals(aggregate)
+	// return ffi.VerifyAggregateSeals(aggregate)
+	return false,nil
 }
 
 func (proofVerifier) VerifyWinningPoSt(ctx context.Context, info proof5.WinningPoStVerifyInfo) (bool, error) {

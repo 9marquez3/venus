@@ -22,10 +22,6 @@ type AggregateSignature = ffi.Signature
 type blsSigner struct{}
 
 func (s blsSigner) VerifyAggregate(pubKeys, msgs [][]byte, signature []byte) bool {
-	digests := []ffi.Digest{}
-	for _, msg := range msgs {
-		digests = append(digests, ffi.Hash(msg))
-	}
 
 	keys := []ffi.PublicKey{}
 	for _, pubKey := range pubKeys {
@@ -34,6 +30,10 @@ func (s blsSigner) VerifyAggregate(pubKeys, msgs [][]byte, signature []byte) boo
 		keys = append(keys, blsPubKey)
 	}
 
+	digests := []ffi.Digest{}
+	for i, msg := range msgs {
+		digests = append(digests, ffi.Hash(keys[i],msg))
+	}
 	var blsSig ffi.Signature
 	copy(blsSig[:], signature)
 	return ffi.Verify(&blsSig, digests, keys)
