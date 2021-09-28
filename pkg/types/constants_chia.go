@@ -60,7 +60,7 @@ type ConsensusConstants struct {
 	MempoolBlockBuffer int64
 	// # Max coin amount uint(1 << 64). This allows coin amounts to fit in 64 bits. This is around 18M chia.
 	// MaxCoinAmount: int
-	MaxCoinAmount int64
+	MaxCoinAmount uint64
 	// # Max block cost in clvm cost units
 	// MaxBlockCostClvm: int
 	MaxBlockCostClvm int64

@@ -65,8 +65,8 @@ func CalculateSpIters(constants *ConsensusConstants, subSlotIters uint64, signag
 func CalculateIpIters(constants *ConsensusConstants, subSlotIters uint64, signagePointIndex uint8, requiredIters uint64) uint64 {
 	spIters := CalculateSpIters(constants, subSlotIters, uint64(signagePointIndex))
 	spIntervalIters := CalculateSpIntervalIters(constants, subSlotIters)
-	if spIters%spIntervalIters != 0 || spIters >= spIntervalIters {
-		panic(fmt.Sprintf("invalid sp iters %d for this ssi %d", spIters, spIntervalIters))
+	if spIters%spIntervalIters != 0 || spIters >= subSlotIters {
+		panic(fmt.Sprintf("invalid spiters %d for this ssi %d", spIters, spIntervalIters))
 	}
 
 	if requiredIters >= spIntervalIters || requiredIters == 0 {
